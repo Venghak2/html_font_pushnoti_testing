@@ -1,0 +1,27 @@
+{
+  "name": "app-jaosua-header-html",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "deploy": "./deploy-cloudflare.sh",
+    "deploy:ui": "./deploy-ui.sh",
+    "update": "./update-deployment.sh",
+    "deploy:manual": "wrangler pages deploy dist --project-name=jaosua-sdk"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "babel-loader": "^10.0.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "firebase": "^10.12.0"
+  }
+}
