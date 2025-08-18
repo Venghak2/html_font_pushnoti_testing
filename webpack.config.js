@@ -1,4 +1,5 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: './index.js',
@@ -13,6 +14,21 @@ module.exports = {
   experiments: {
     outputModule: false,
   },
+  externals: {
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js': 'firebase',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js': 'firebase',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js': 'firebase',
+  },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'firebase-messaging-sw.js',
+          to: 'firebase-messaging-sw.js'
+        }
+      ]
+    })
+  ],
   module: {
     rules: [
       {
