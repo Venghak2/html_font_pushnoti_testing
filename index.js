@@ -1,6 +1,5 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getMessaging,
   getToken,
@@ -11,7 +10,6 @@ import { firebaseConfig, VAPID_KEY } from "./firebase-config.js";
 const API_BASE   = "https://api.dev.1xnoti.onesiamsoft.com/api/docsapi/subscribe";  
 
 const app       = initializeApp(firebaseConfig);
-const auth      = getAuth(app);
 const messaging = getMessaging(app);
 
 onMessage(messaging, payload => {
@@ -20,7 +18,6 @@ onMessage(messaging, payload => {
 
 async function authentication() {
     try {
-        await signInAnonymously(auth);
         const token = await getToken(messaging, {
             vapidKey: VAPID_KEY,
         });
