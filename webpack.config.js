@@ -1,33 +1,26 @@
-const path = require('path');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require("path");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
-  entry: './index.js',
+  entry: "./index.js",
   output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'jaosua-sdk.js',
-    library: 'JaosuaSDK',
-    libraryTarget: 'umd',
-    globalObject: 'this',
+    path: path.resolve(__dirname, "dist"),
+    filename: "jaosua-sdk.js",
+    library: "JaosuaSDK",
+    libraryTarget: "umd",
+    globalObject: "this",
   },
-  mode: 'production',
-  experiments: {
-    outputModule: false,
-  },
-  externals: {
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js': 'firebase',
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js': 'firebase',
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js': 'firebase',
-  },
+  mode: "production",
+  target: "web",
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: 'firebase-messaging-sw.js',
-          to: 'firebase-messaging-sw.js'
-        }
-      ]
-    })
+          from: "firebase-messaging-sw.js",
+          to: "firebase-messaging-sw.js",
+        },
+      ],
+    }),
   ],
   module: {
     rules: [
@@ -35,9 +28,9 @@ module.exports = {
         test: /\.js$/,
         exclude: /node_modules/,
         use: {
-          loader: 'babel-loader',
+          loader: "babel-loader",
           options: {
-            presets: ['@babel/preset-env'],
+            presets: ["@babel/preset-env"],
           },
         },
       },
