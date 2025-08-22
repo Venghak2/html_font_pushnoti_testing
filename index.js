@@ -63,7 +63,8 @@ async function authentication() {
             throw new Error(message || `Request failed (${res.status})`);
         }
 
-        alert("Device subscribed successfully!");
+        const result = await res.json();
+        alert(result.message);
     } catch (err) {
         alert("Error while subscribing: " + err.message);
     }
