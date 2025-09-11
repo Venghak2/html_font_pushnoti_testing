@@ -1,191 +1,69 @@
 
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken,onMessage } from "firebase/messaging";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
-// Configurable via global variables (can be overridden by embedding site)
-const API_BASE   = window.JAOSUA_CONFIG?.apiBase;  
-const USERUID    = window.JAOSUA_CONFIG?.userUid;
-const LOGO_URL   = window.JAOSUA_CONFIG?.logoUrl;
-
-// Firebase configuration (configurable via window.JAOSUA_CONFIG)
+// ---------------- Config ----------------
+const API_SUBSCRIBE = window.JAOSUA_CONFIG?.apiSubscribe;
+const API_UNSUBSCRIBE = window.JAOSUA_CONFIG?.apiUnsubscribe;
+const USERUID = window.JAOSUA_CONFIG?.userUid;
+const PLAYERUID = window.JAOSUA_CONFIG?.playerUid;
+const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
 const firebaseConfig = window.JAOSUA_CONFIG?.firebaseConfig;
-
 const VAPID_KEY = window.JAOSUA_CONFIG?.vapidKey;
 
-// Make firebaseConfig available globally (for service worker compatibility)
-if (typeof self !== 'undefined') {
-  self.firebaseConfig = firebaseConfig;
-}
+// Make firebaseConfig available globally for service worker
+if (typeof self !== 'undefined') self.firebaseConfig = firebaseConfig;
 
-const app       = initializeApp(firebaseConfig);
+// Pass config to service worker
+const passConfigToServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.ready;
+    if (registration.active) {
+      registration.active.postMessage({
+        type: 'FIREBASE_CONFIG',
+        config: firebaseConfig
+      });
+    }
+  }
+};
+
+const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-onMessage(messaging, payload => {console.log("[FCM] foreground message:", payload);});
-
-// CSS styles to inject
-const CSS_STYLES = `
-  .jaosua-widget {
-    margin: 0;
-    padding: 0;
-    font-family: 'Poppins', sans-serif;
-  }
-  
-  .jaosua-pwa-install-prompt {
-    background: linear-gradient(135deg, rgba(0, 0, 0, .98), rgba(10, 10, 10, .98));
-  }
-  
-  .jaosua-prompt-content {
-    align-items: center;
-    display: flex;
-    gap: 16px;
-    justify-content: space-between;
-    max-width: 100%;
-    padding: 16px 20px;
-  }
-  
-  .jaosua-prompt-logo {
-    background: rgba(255, 255, 255, .1);
-    border: 1px solid hsla(0, 0%, 100%, .2);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
-    height: 48px;
-    object-fit: contain;
-    width: 48px;
-  }
-  
-  .jaosua-prompt-logo-section {
-    align-items: center;
-    display: flex;
-    flex: 1;
-    gap: 12px;
-    min-width: 0;
-  }
-  
-  .jaosua-prompt-text {
-    color: #fff;
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .jaosua-prompt-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 4px;
-  }
-  
-  .jaosua-prompt-subtitle {
-    color: rgba(255, 255, 255, .8);
-    font-size: 14px;
-    font-weight: 400;
-    margin: 0;
-  }
-  
-  .jaosua-prompt-actions {
-    align-items: center;
-    display: flex;
-    flex-shrink: 0;
-    gap: 12px;
-  }
-  
-  .jaosua-dismiss-button {
-    align-items: center;
-    background: rgba(255, 255, 255, .1);
-    border: 1px solid hsla(0, 0%, 100%, .2);
-    border-radius: 50%;
-    color: rgba(255, 255, 255, .8);
-    cursor: pointer;
-    display: flex;
-    height: 36px;
-    justify-content: center;
-    transition: all .2s ease;
-    width: 36px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  .jaosua-install-button {
-    background: linear-gradient(135deg, #83f, #a855f7);
-    border: none;
-    border-radius: 24px;
-    box-shadow: 0 4px 12px rgba(136, 51, 255, .3);
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    overflow: hidden;
-    padding: 10px 20px;
-    position: relative;
-    transition: all .3s cubic-bezier(.25, .8, .25, 1);
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  .jaosua-install-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -75%;
-    width: 50%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: skewX(-20deg);
-    filter: blur(8px);
-    transition: left 0.6s ease;
-  }
-  
-  .jaosua-install-button:hover::before {
-    left: 125%;
-  }
-  
-  .jaosua-install-button:hover {
-    box-shadow: 0 6px 20px rgba(136, 51, 255, 0.5);
-    transform: translateY(-2px);
-  }
-  
-  .jaosua-marquee {
-    height: 25px;
-    overflow: hidden;
-    position: relative;
-    color: #535857;
-  }
-  
-  .jaosua-marquee div {
-    display: block;
-    width: 200%;
-    height: 30px;
-    position: absolute;
-    overflow: hidden;
-    animation: jaosua-marquee 10s linear infinite;
-  }
-  
-  .jaosua-marquee span {
-    float: left;
-    width: 50%;
-  }
-  
-  @keyframes jaosua-marquee {
-    0% { left: 0; }
-    100% { left: -100%; }
-  }
-  
-  .jaosua-marquee:hover div {
-    -webkit-animation-play-state: paused;
-    animation-play-state: paused;
-  }
-`;
-
-// Function to inject CSS
+// ---------------- CSS Injection ----------------
 function injectCSS() {
   if (document.getElementById('jaosua-styles')) return;
-  
   const style = document.createElement('style');
   style.id = 'jaosua-styles';
-  style.textContent = CSS_STYLES;
+  style.textContent = `
+    .jaosua-widget { margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    .jaosua-pwa-install-prompt { background: linear-gradient(135deg, rgba(0,0,0,.98), rgba(10,10,10,.98)); }
+    .jaosua-prompt-content { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 20px; max-width: 100%; }
+    .jaosua-prompt-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 12px; border: 1px solid hsla(0,0%,100%,.2); background: rgba(255,255,255,.1); box-shadow: 0 2px 8px rgba(0,0,0,.3);}
+    .jaosua-prompt-logo-section { display: flex; gap: 12px; align-items: center; flex: 1; min-width: 0; }
+    .jaosua-prompt-text { color: #fff; flex: 1; min-width: 0; }
+    .jaosua-prompt-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+    .jaosua-prompt-subtitle { font-size: 14px; font-weight: 400; margin: 0; color: rgba(255,255,255,.8); }
+    .jaosua-prompt-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .jaosua-dismiss-button { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid hsla(0,0%,100%,.2); background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); transition: all .2s ease; }
+    .jaosua-subscribe { padding: 10px 20px; border-radius: 24px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; position: relative; overflow: hidden; transition: all .3s cubic-bezier(.25,.8,.25,1); }
+    .subscribe-btn { background: linear-gradient(135deg,#83f,#a855f7); color: #fff; box-shadow: 0 4px 12px rgba(136,51,255,.3); }
+    .subscribe-btn::before { content: ''; position: absolute; top: 0; left: -75%; width: 50%; height: 100%; background: rgba(255,255,255,.2); transform: skewX(-20deg); filter: blur(8px); transition: left .6s ease; }
+    .subscribe-btn:hover::before { left: 125%; }
+    .subscribe-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(136,51,255,.5); }
+    .unsubscribe-btn { background: linear-gradient(135deg,#ccc,#888); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    .jaosua-marquee { height: 25px; overflow: hidden; position: relative; color: #535857; }
+    .jaosua-marquee div { width: 200%; position: absolute; animation: jaosua-marquee 10s linear infinite; }
+    .jaosua-marquee span { float: left; width: 50%; }
+    @keyframes jaosua-marquee { 0%{left:0} 100%{left:-100%} }
+    .jaosua-marquee:hover div { animation-play-state: paused; }
+  `;
   document.head.appendChild(style);
 }
 
-// Function to inject HTML
+// ---------------- HTML Injection ----------------
 function injectHTML() {
   if (document.getElementById('jaosua-widget')) return;
-  
   const widgetHTML = `
     <div id="jaosua-widget" class="jaosua-widget">
       <div class="jaosua-pwa-install-prompt">
@@ -204,127 +82,124 @@ function injectHTML() {
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
-            <button class="jaosua-install-button">
-              Install the app
-            </button>
+            <button class="jaosua-subscribe subscribe-btn">Subscribe</button>
           </div>
         </div>
       </div>
       <div class="jaosua-marquee">
         <div>
-          <span>Jaosua123 ยินดีให้บริการค่ะ ฝาก-ถอน โอนไว แอดมินบริการ24ชม. ถอนไม่อั้นทุกยอดฝาก</span>
-          <span>Jaosua123 ยินดีให้บริการค่ะ ฝาก-ถอน โอนไว แอดมินบริการ24ชม. ถอนไม่อั้นทุกยอดฝาก</span>
+          <span>Jaosua123 ยินดีให้บริการค่ะ กาก-ถอน โอนไว แอดมินบริการ24ชม. ถอนไม่อั้นทุกยอดกาก</span>
+          <span>Jaosua123 ยินดีให้บริการค่ะ กาก-ถอน โอนไว แอดมินบริการ24ชม. ถอนไม่อั้นทุกยอดกาก</span>
         </div>
       </div>
     </div>
   `;
-  
-  // Insert at the beginning of body or at a specific container
-  const targetContainer = document.querySelector(window.JAOSUA_CONFIG?.container || 'body');
-  if (targetContainer) {
-    targetContainer.insertAdjacentHTML('afterbegin', widgetHTML);
-  }
+  const target = document.querySelector(window.JAOSUA_CONFIG?.container || 'body');
+  if (target) target.insertAdjacentHTML('afterbegin', widgetHTML);
 }
 
+// ---------------- Helpers ----------------
 async function getServiceWorkerRegistration() {
-    if (!("serviceWorker" in navigator)) {
-        throw new Error("Service Workers are not supported in this browser");
-    }
+  if (!("serviceWorker" in navigator)) throw new Error("Service Workers not supported");
+  if (!self.isSecureContext) throw new Error("Site must use HTTPS or localhost");
 
-    if (!self.isSecureContext) {
-        throw new Error("Site must be served over HTTPS or localhost for Push/SW");
-    }
-
-    let registration = await navigator.serviceWorker.getRegistration();
-    if (!registration) {
-        try {
-            registration = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
-        } catch (err) {
-            throw new Error(`Error registration service worker. ${err}`);
-        }
-    }
-
-    await navigator.serviceWorker.ready;
-    return registration;
+  let registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) registration = await navigator.serviceWorker.register("/sw.js");
+  await passConfigToServiceWorker();
+  await navigator.serviceWorker.ready;
+  return registration;
 }
 
 async function requestNotificationPermission() {
-    if (typeof Notification === "undefined") {
-        throw new Error("Notifications are not supported in this browser");
-    }
-
-    if (Notification.permission === "denied") {
-        throw new Error("Notification permission is permanently denied by the user");
-    }
-
-    if (Notification.permission !== "granted") {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-            throw new Error("Notification permission was not granted");
-        }
-    }
-    return true;
-}
-
-async function authentication() {
-    try {
-        await requestNotificationPermission();
-        const registration = await getServiceWorkerRegistration();
-        const token = await getToken(messaging, {
-            vapidKey: VAPID_KEY,
-            serviceWorkerRegistration: registration,
-        });
-        if (!token) {
-            alert("Notification permission denied or no token retrieved.");
-            return;
-        }
-        console.log(token);
-        const res = await fetch(`${API_BASE}`, {
-            method : "POST",
-            headers: {
-                "Content-Type" : "application/json",
-            },
-            body   : JSON.stringify({ token, uuid: USERUID })
-        });
-        if (!res.ok) {
-            const { message } = await res.json().catch(() => ({}));
-            throw new Error(message || `Request failed (${res.status})`);
-        }
-
-        const result = await res.json();
-        alert(result.message);
-    } catch (err) {
-        alert("Error while subscribing: " + err.message);
-    }
-}
-
-// Function to setup event listeners
-function setupEventListeners() {
-  const installBtn = document.querySelector(".jaosua-install-button");
-  const dismissBtn = document.querySelector(".jaosua-dismiss-button");
-  
-  if (installBtn) {
-    installBtn.addEventListener("click", authentication);
+  if (typeof Notification === "undefined") throw new Error("Notifications not supported");
+  if (Notification.permission === "denied") throw new Error("Notification permission denied");
+  if (Notification.permission !== "granted") {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") throw new Error("Notification permission not granted");
   }
-  
-  if (dismissBtn) {
-    dismissBtn.addEventListener("click", () => {
-      const widget = document.getElementById('jaosua-widget');
-      if (widget) {
-        widget.style.display = 'none';
-      }
+  return true;
+}
+
+function updateButtonState(isSubscribed) {
+  const btn = document.querySelector(".jaosua-subscribe");
+  if (!btn) return;
+
+  if (isSubscribed) {
+    btn.textContent = "Unsubscribe";
+    btn.dataset.subscribed = "true";
+    btn.classList.remove("subscribe-btn");
+    btn.classList.add("unsubscribe-btn");
+  } else {
+    btn.textContent = "Subscribe";
+    btn.dataset.subscribed = "false";
+    btn.classList.remove("unsubscribe-btn");
+    btn.classList.add("subscribe-btn");
+  }
+}
+
+// ---------------- Toggle Subscription ----------------
+async function toggleSubscription() {
+  try {
+    const btn = document.querySelector(".jaosua-subscribe");
+    if (!btn) return;
+
+    const isSubscribed = btn.dataset.subscribed === "true";
+    const url = isSubscribed ? API_UNSUBSCRIBE : API_SUBSCRIBE;
+
+    await requestNotificationPermission();
+    const registration = await getServiceWorkerRegistration();
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, uuid: USERUID, playerId: PLAYERUID })
     });
+
+    if (!res.ok) {
+      const { message } = await res.json().catch(() => ({}));
+      throw new Error(message || `Request failed (${res.status})`);
+    }
+
+    updateButtonState(!isSubscribed);
+
+  } catch (err) {
+    alert("Error while updating subscription: " + err.message);
   }
 }
 
-// Initialize the widget
+// ---------------- Check Subscription ----------------
+async function checkSubscriptionStatus() {
+  try {
+    const res = await fetch(`${API_SUBSCRIBE}/check?playerUid=${PLAYERUID}&uuid=${USERUID}`);
+    const { subscribed } = await res.json();
+    updateButtonState(subscribed);
+  } catch (err) {
+    console.warn("Subscription check failed:", err.message);
+  }
+}
+
+// ---------------- Event Setup ----------------
+function setupEventListeners() {
+  const subBtn = document.querySelector(".jaosua-subscribe");
+  const dismissBtn = document.querySelector(".jaosua-dismiss-button");
+
+  if (subBtn) subBtn.addEventListener("click", toggleSubscription);
+  if (dismissBtn) dismissBtn.addEventListener("click", () => {
+    const widget = document.getElementById('jaosua-widget');
+    if (widget) widget.style.display = 'none';
+  });
+}
+
+// ---------------- Initialization ----------------
 function initializeWidget() {
   injectCSS();
   injectHTML();
   setupEventListeners();
+  passConfigToServiceWorker();
+  checkSubscriptionStatus();
 }
 
-// Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener("DOMContentLoaded", initializeWidget);
 } else {
