@@ -1,15 +1,16 @@
 
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken } from "firebase/messaging";
 
 // ---------------- Config ----------------
 const API_SUBSCRIBE = window.JAOSUA_CONFIG?.apiSubscribe;
 const API_UNSUBSCRIBE = window.JAOSUA_CONFIG?.apiUnsubscribe;
+const firebaseConfig = window.JAOSUA_CONFIG?.firebaseConfig;
+const VAPID_KEY = window.JAOSUA_CONFIG?.vapidKey;
+
 const USERUID = window.JAOSUA_CONFIG?.userUid;
 const PLAYERUID = window.JAOSUA_CONFIG?.playerUid;
 const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
-const firebaseConfig = window.JAOSUA_CONFIG?.firebaseConfig;
-const VAPID_KEY = window.JAOSUA_CONFIG?.vapidKey;
 
 // Make firebaseConfig available globally for service worker
 if (typeof self !== 'undefined') self.firebaseConfig = firebaseConfig;
@@ -141,8 +142,8 @@ function updateButtonState(isSubscribed) {
 async function toggleSubscription() {
   try {
     const btn = document.querySelector(".jaosua-subscribe");
-    if (!btn) return;
-
+    if (!btn) return;  
+    
     const isSubscribed = btn.dataset.subscribed === "true";
     const url = isSubscribed ? API_UNSUBSCRIBE : API_SUBSCRIBE;
 
