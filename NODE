@@ -9,3 +9,5 @@ measurementId:     "G-30JJFRDNSX"
 VAPID_KEY:         "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo"
 API_BASE:          "http://localhost:7000/api/subscribe"
 USERUID:           "01989849-eafd-7a31-8e3f-0ddaa7d07330"
+
+api_base: "API_SUBSCRIBE=https://api.dev.1xnoti.onesiamsoft.com/api/subscribe"

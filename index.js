@@ -3,14 +3,25 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
 
 // ---------------- Config ----------------
-const API_SUBSCRIBE = window.JAOSUA_CONFIG?.apiSubscribe;
-const API_UNSUBSCRIBE = window.JAOSUA_CONFIG?.apiUnsubscribe;
-const firebaseConfig = window.JAOSUA_CONFIG?.firebaseConfig;
-const VAPID_KEY = window.JAOSUA_CONFIG?.vapidKey;
+//const API_BASE = "https://api.dev.1xnoti.onesiamsoft.com/"
+const API_BASE = "http://localhost:7000/"
+const API_SUBSCRIBE = API_BASE + "api/"+ "subscribe";
+const API_UNSUBSCRIBE = API_BASE + "api/" + "unsubscribe";
 
 const USERUID = window.JAOSUA_CONFIG?.userUid;
-const PLAYERUID = window.JAOSUA_CONFIG?.playerUid;
+const PLAYERID = window.JAOSUA_CONFIG?.playerId;
 const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDEknhMLtR7yGyjfjI3Reyn1WGvkL9K6aI",
+    authDomain: "notification-91d47.firebaseapp.com",
+    projectId: "notification-91d47",
+    storageBucket: "notification-91d47.appspot.com",
+    messagingSenderId: "931826122946",
+    appId: "1:931826122946:web:7840927810f854470ebb5b",
+    measurementId: "G-30JJFRDNSX"
+};
+const VAPID_KEY = "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo"
 
 // Make firebaseConfig available globally for service worker
 if (typeof self !== 'undefined') self.firebaseConfig = firebaseConfig;
@@ -149,12 +160,12 @@ async function toggleSubscription() {
 
     await requestNotificationPermission();
     const registration = await getServiceWorkerRegistration();
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+    const generateToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, uuid: USERUID, playerId: PLAYERUID })
+      body: JSON.stringify({ tokenDevice: generateToken, uuid: USERUID, playerId: PLAYERID })
     });
 
     if (!res.ok) {
@@ -172,7 +183,7 @@ async function toggleSubscription() {
 // ---------------- Check Subscription ----------------
 async function checkSubscriptionStatus() {
   try {
-    const res = await fetch(`${API_SUBSCRIBE}/check?playerUid=${PLAYERUID}&uuid=${USERUID}`);
+    const res = await fetch(`${API_SUBSCRIBE}/check?playerid=${PLAYERID}&uuid=${USERUID}`);
     const { subscribed } = await res.json();
     updateButtonState(subscribed);
   } catch (err) {
