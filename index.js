@@ -183,7 +183,7 @@ async function toggleSubscription() {
 
     updateButtonState(!isSubscribed);
   } catch (err) {
-    console.log("Error while updating subscription: " + err.message);
+    alert("🚫 Error while updating subscription: " + err.message);
   }
 }
 
