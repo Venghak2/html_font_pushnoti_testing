@@ -1,11 +1,9 @@
-
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
 
 // ---------------- Config ----------------
-//const API_BASE = "https://api.dev.1xnoti.onesiamsoft.com/"
-const API_BASE = "http://localhost:7000/"
-const API_SUBSCRIBE = API_BASE + "api/"+ "subscribe";
+const API_BASE = "https://api.dev.1xnoti.onesiamsoft.com/";
+const API_SUBSCRIBE = API_BASE + "api/" + "subscribe";
 const API_UNSUBSCRIBE = API_BASE + "api/" + "unsubscribe";
 
 const USERUID = window.JAOSUA_CONFIG?.userUid;
@@ -13,20 +11,25 @@ const PLAYERID = window.JAOSUA_CONFIG?.playerId;
 const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDEknhMLtR7yGyjfjI3Reyn1WGvkL9K6aI",
-    authDomain: "notification-91d47.firebaseapp.com",
-    projectId: "notification-91d47",
-    storageBucket: "notification-91d47.appspot.com",
-    messagingSenderId: "931826122946",
-    appId: "1:931826122946:web:7840927810f854470ebb5b",
-    measurementId: "G-30JJFRDNSX"
+  apiKey: "AIzaSyDEknhMLtR7yGyjfjI3Reyn1WGvkL9K6aI",
+  authDomain: "notification-91d47.firebaseapp.com",
+  projectId: "notification-91d47",
+  storageBucket: "notification-91d47.appspot.com",
+  messagingSenderId: "931826122946",
+  appId: "1:931826122946:web:7840927810f854470ebb5b",
+  measurementId: "G-30JJFRDNSX"
 };
-const VAPID_KEY = "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo"
+
+const VAPID_KEY = "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo";
 
 // Make firebaseConfig available globally for service worker
 if (typeof self !== 'undefined') self.firebaseConfig = firebaseConfig;
 
-// Pass config to service worker
+// ---------------- Firebase Init ----------------
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+// ---------------- Pass config to SW ----------------
 const passConfigToServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.ready;
@@ -38,9 +41,6 @@ const passConfigToServiceWorker = async () => {
     }
   }
 };
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
 
 // ---------------- CSS Injection ----------------
 function injectCSS() {
@@ -63,7 +63,7 @@ function injectCSS() {
     .subscribe-btn::before { content: ''; position: absolute; top: 0; left: -75%; width: 50%; height: 100%; background: rgba(255,255,255,.2); transform: skewX(-20deg); filter: blur(8px); transition: left .6s ease; }
     .subscribe-btn:hover::before { left: 125%; }
     .subscribe-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(136,51,255,.5); }
-    .unsubscribe-btn { background: linear-gradient(135deg,#ccc,#888); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    .unsubscribe-btn { background: linear-gradient(#ADADAD); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
     .jaosua-marquee { height: 25px; overflow: hidden; position: relative; color: #535857; }
     .jaosua-marquee div { width: 200%; position: absolute; animation: jaosua-marquee 10s linear infinite; }
     .jaosua-marquee span { float: left; width: 50%; }
@@ -116,7 +116,7 @@ async function getServiceWorkerRegistration() {
   if (!self.isSecureContext) throw new Error("Site must use HTTPS or localhost");
 
   let registration = await navigator.serviceWorker.getRegistration();
-  if (!registration) registration = await navigator.serviceWorker.register("/sw.js");
+  if (!registration) registration = await navigator.serviceWorker.register("./sw.js");
   await passConfigToServiceWorker();
   await navigator.serviceWorker.ready;
   return registration;
@@ -129,7 +129,6 @@ async function requestNotificationPermission() {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") throw new Error("Notification permission not granted");
   }
-  return true;
 }
 
 function updateButtonState(isSubscribed) {
@@ -149,19 +148,28 @@ function updateButtonState(isSubscribed) {
   }
 }
 
+// ---------------- Debounce Helper ----------------
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    if (timer) return; // ignore repeated clicks within delay
+    timer = setTimeout(() => { timer = null; }, delay);
+    return fn.apply(this, args);
+  };
+}
+
 // ---------------- Toggle Subscription ----------------
 async function toggleSubscription() {
   try {
     const btn = document.querySelector(".jaosua-subscribe");
-    if (!btn) return;  
-    
+    if (!btn) return;
+
     const isSubscribed = btn.dataset.subscribed === "true";
     const url = isSubscribed ? API_UNSUBSCRIBE : API_SUBSCRIBE;
 
     await requestNotificationPermission();
     const registration = await getServiceWorkerRegistration();
     const generateToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
-
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -174,9 +182,8 @@ async function toggleSubscription() {
     }
 
     updateButtonState(!isSubscribed);
-
   } catch (err) {
-    alert("Error while updating subscription: " + err.message);
+    console.log("Error while updating subscription: " + err.message);
   }
 }
 
@@ -196,7 +203,8 @@ function setupEventListeners() {
   const subBtn = document.querySelector(".jaosua-subscribe");
   const dismissBtn = document.querySelector(".jaosua-dismiss-button");
 
-  if (subBtn) subBtn.addEventListener("click", toggleSubscription);
+  if (subBtn) subBtn.addEventListener("click", debounce(toggleSubscription, 1000)); 
+
   if (dismissBtn) dismissBtn.addEventListener("click", () => {
     const widget = document.getElementById('jaosua-widget');
     if (widget) widget.style.display = 'none';
