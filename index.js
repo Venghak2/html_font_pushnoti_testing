@@ -8,6 +8,7 @@ const API_UNSUBSCRIBE = API_BASE + "api/" + "unsubscribe";
 
 const USERUID = window.JAOSUA_CONFIG?.userUid;
 const PLAYERID = window.JAOSUA_CONFIG?.playerId;
+const USERNAME = window.JAOSUA_CONFIG?.username;
 const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
 
 const firebaseConfig = {
@@ -173,7 +174,7 @@ async function toggleSubscription() {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokenDevice: generateToken, uuid: USERUID, playerId: PLAYERID })
+      body: JSON.stringify({ tokenDevice: generateToken, uuid: USERUID, playerId: PLAYERID, username: USERNAME })
     });
 
     if (!res.ok) {
