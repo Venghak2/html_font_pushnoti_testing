@@ -6,7 +6,7 @@ const API_BASE = "https://api.dev.1xnoti.onesiamsoft.com/";
 const API_SUBSCRIBE = API_BASE + "api/" + "subscribe";
 const API_UNSUBSCRIBE = API_BASE + "api/" + "unsubscribe";
 
-const USERUID = window.JAOSUA_CONFIG?.userUid;
+const SECRET_KEY = window.JAOSUA_CONFIG?.secretKey;
 const PLAYERID = window.JAOSUA_CONFIG?.playerId;
 const USERNAME = window.JAOSUA_CONFIG?.username;
 const LOGO_URL = window.JAOSUA_CONFIG?.logoUrl;
@@ -174,7 +174,7 @@ async function toggleSubscription() {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokenDevice: generateToken, uuid: USERUID, playerId: PLAYERID, username: USERNAME })
+      body: JSON.stringify({ tokenDevice: generateToken, key: SECRET_KEY, playerId: PLAYERID, username: USERNAME })
     });
 
     if (!res.ok) {
@@ -191,7 +191,7 @@ async function toggleSubscription() {
 // ---------------- Check Subscription ----------------
 async function checkSubscriptionStatus() {
   try {
-    const res = await fetch(`${API_SUBSCRIBE}/check?playerid=${PLAYERID}&uuid=${USERUID}`);
+    const res = await fetch(`${API_SUBSCRIBE}/check?key=${SECRET_KEY}&playerid=${PLAYERID}`);
     const { subscribed } = await res.json();
     updateButtonState(subscribed);
   } catch (err) {
