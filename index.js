@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
 
 // ---------------- Config ----------------
-const API_BASE = "https://api.dev.1xnoti.onesiamsoft.com/";
+const API_BASE = "https://api.1xnoti.onesiamsoft.com/";
 const API_SUBSCRIBE = API_BASE + "api/" + "subscribe";
 const API_UNSUBSCRIBE = API_BASE + "api/" + "unsubscribe";
 
@@ -18,13 +18,14 @@ const firebaseConfig = {
   storageBucket: "notification-91d47.appspot.com",
   messagingSenderId: "931826122946",
   appId: "1:931826122946:web:7840927810f854470ebb5b",
-  measurementId: "G-30JJFRDNSX"
+  measurementId: "G-30JJFRDNSX",
 };
 
-const VAPID_KEY = "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo";
+const VAPID_KEY =
+  "BNdpNyxjim_8r4LfhR08n9bEOrr5dcw5iOcomnqufFoXV6sK0x4qxDmaEv1Fh3Tta4czYsSvMR9UQMZqS7KKxUo";
 
 // Make firebaseConfig available globally for service worker
-if (typeof self !== 'undefined') self.firebaseConfig = firebaseConfig;
+if (typeof self !== "undefined") self.firebaseConfig = firebaseConfig;
 
 // ---------------- Firebase Init ----------------
 const app = initializeApp(firebaseConfig);
@@ -32,12 +33,12 @@ const messaging = getMessaging(app);
 
 // ---------------- Pass config to SW ----------------
 const passConfigToServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
+  if ("serviceWorker" in navigator) {
     const registration = await navigator.serviceWorker.ready;
     if (registration.active) {
       registration.active.postMessage({
-        type: 'FIREBASE_CONFIG',
-        config: firebaseConfig
+        type: "FIREBASE_CONFIG",
+        config: firebaseConfig,
       });
     }
   }
@@ -45,9 +46,9 @@ const passConfigToServiceWorker = async () => {
 
 // ---------------- CSS Injection ----------------
 function injectCSS() {
-  if (document.getElementById('jaosua-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'jaosua-styles';
+  if (document.getElementById("jaosua-styles")) return;
+  const style = document.createElement("style");
+  style.id = "jaosua-styles";
   style.textContent = `
     .jaosua-widget { margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
     .jaosua-pwa-install-prompt { background: linear-gradient(135deg, rgba(0,0,0,.98), rgba(10,10,10,.98)); }
@@ -70,13 +71,60 @@ function injectCSS() {
     .jaosua-marquee span { float: left; width: 50%; }
     @keyframes jaosua-marquee { 0%{left:0} 100%{left:-100%} }
     .jaosua-marquee:hover div { animation-play-state: paused; }
+    .jaosua-notification-alert { position: fixed; top: 16px; right: 16px; z-index: 99999; max-width: 360px; padding: 14px 18px; background: linear-gradient(135deg, rgba(180,40,40,.98), rgba(120,20,20,.98)); color: #fff; font-size: 14px; line-height: 1.4; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.35); display: flex; align-items: flex-start; gap: 12px; animation: jaosua-notification-in .3s ease; font-family: 'Poppins', sans-serif; }
+    .jaosua-notification-alert.is-out { animation: jaosua-notification-out .25s ease forwards; }
+    .jaosua-notification-alert-icon { flex-shrink: 0; margin-top: 1px; }
+    .jaosua-notification-alert-text { flex: 1; }
+    .jaosua-notification-alert-close { flex-shrink: 0; width: 28px; height: 28px; border: none; border-radius: 50%; background: rgba(255,255,255,.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: background .2s; }
+    .jaosua-notification-alert-close:hover { background: rgba(255,255,255,.35); }
+    @keyframes jaosua-notification-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes jaosua-notification-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(24px); } }
   `;
   document.head.appendChild(style);
 }
 
+// ---------------- Notification alert (toast) ----------------
+const NOTIFICATION_AUTO_CLOSE_MS = 5000;
+
+function showNotificationAlert(message) {
+  const existing = document.querySelector(".jaosua-notification-alert");
+  if (existing) existing.remove();
+
+  const el = document.createElement("div");
+  el.className = "jaosua-notification-alert";
+  el.setAttribute("role", "alert");
+  el.innerHTML = `
+    <span class="jaosua-notification-alert-icon" aria-hidden="true">🚫</span>
+    <span class="jaosua-notification-alert-text">${escapeHtml(message)}</span>
+    <button type="button" class="jaosua-notification-alert-close" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  `;
+
+  const close = () => {
+    el.classList.add("is-out");
+    setTimeout(() => el.remove(), 260);
+  };
+
+  el.querySelector(".jaosua-notification-alert-close").addEventListener("click", close);
+  const timer = setTimeout(close, NOTIFICATION_AUTO_CLOSE_MS);
+  el.addEventListener("mouseenter", () => clearTimeout(timer));
+
+  document.body.appendChild(el);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // ---------------- HTML Injection ----------------
 function injectHTML() {
-  if (document.getElementById('jaosua-widget')) return;
+  if (document.getElementById("jaosua-widget")) return;
   const widgetHTML = `
     <div id="jaosua-widget" class="jaosua-widget">
       <div class="jaosua-pwa-install-prompt">
@@ -107,28 +155,36 @@ function injectHTML() {
       </div>
     </div>
   `;
-  const target = document.querySelector(window.JAOSUA_CONFIG?.container || 'body');
-  if (target) target.insertAdjacentHTML('afterbegin', widgetHTML);
+  const target = document.querySelector(
+    window.JAOSUA_CONFIG?.container || "body",
+  );
+  if (target) target.insertAdjacentHTML("afterbegin", widgetHTML);
 }
 
 // ---------------- Helpers ----------------
 async function getServiceWorkerRegistration() {
-  if (!("serviceWorker" in navigator)) throw new Error("Service Workers not supported");
-  if (!self.isSecureContext) throw new Error("Site must use HTTPS or localhost");
+  if (!("serviceWorker" in navigator))
+    throw new Error("Service Workers not supported");
+  if (!self.isSecureContext)
+    throw new Error("Site must use HTTPS or localhost");
 
   let registration = await navigator.serviceWorker.getRegistration();
-  if (!registration) registration = await navigator.serviceWorker.register("./sw.js");
+  if (!registration)
+    registration = await navigator.serviceWorker.register("./sw.js");
   await passConfigToServiceWorker();
   await navigator.serviceWorker.ready;
   return registration;
 }
 
 async function requestNotificationPermission() {
-  if (typeof Notification === "undefined") throw new Error("Notifications not supported");
-  if (Notification.permission === "denied") throw new Error("Notification permission denied");
+  if (typeof Notification === "undefined")
+    throw new Error("Notifications not supported");
+  if (Notification.permission === "denied")
+    throw new Error("Notification permission denied");
   if (Notification.permission !== "granted") {
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") throw new Error("Notification permission not granted");
+    if (permission !== "granted")
+      throw new Error("Notification permission not granted");
   }
 }
 
@@ -154,7 +210,9 @@ function debounce(fn, delay) {
   let timer;
   return function (...args) {
     if (timer) return; // ignore repeated clicks within delay
-    timer = setTimeout(() => { timer = null; }, delay);
+    timer = setTimeout(() => {
+      timer = null;
+    }, delay);
     return fn.apply(this, args);
   };
 }
@@ -170,11 +228,23 @@ async function toggleSubscription() {
 
     await requestNotificationPermission();
     const registration = await getServiceWorkerRegistration();
-    const generateToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+    const generateToken = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    const stringPlayerId = PLAYERID.toString();
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokenDevice: generateToken, key: SECRET_KEY, playerId: PLAYERID, username: USERNAME })
+      headers: {
+        "Content-Type": "application/json",
+        "X-Secret-Key": SECRET_KEY,
+      },
+      body: JSON.stringify({
+        tokenDevice: generateToken,
+        key: SECRET_KEY,
+        playerId: stringPlayerId,
+        username: USERNAME,
+      }),
     });
 
     if (!res.ok) {
@@ -184,14 +254,17 @@ async function toggleSubscription() {
 
     updateButtonState(!isSubscribed);
   } catch (err) {
-    alert("🚫 Error while updating subscription: " + err.message);
+    showNotificationAlert("Error while updating subscription: " + err.message);
   }
 }
 
 // ---------------- Check Subscription ----------------
 async function checkSubscriptionStatus() {
   try {
-    const res = await fetch(`${API_SUBSCRIBE}/check?key=${SECRET_KEY}&playerid=${PLAYERID}`);
+    const stringPlayerId = PLAYERID.toString();
+    const res = await fetch(
+      `${API_SUBSCRIBE}/check?key=${SECRET_KEY}&playerid=${stringPlayerId}`,
+    );
     const { subscribed } = await res.json();
     updateButtonState(subscribed);
   } catch (err) {
@@ -204,12 +277,14 @@ function setupEventListeners() {
   const subBtn = document.querySelector(".jaosua-subscribe");
   const dismissBtn = document.querySelector(".jaosua-dismiss-button");
 
-  if (subBtn) subBtn.addEventListener("click", debounce(toggleSubscription, 1000)); 
+  if (subBtn)
+    subBtn.addEventListener("click", debounce(toggleSubscription, 1000));
 
-  if (dismissBtn) dismissBtn.addEventListener("click", () => {
-    const widget = document.getElementById('jaosua-widget');
-    if (widget) widget.style.display = 'none';
-  });
+  if (dismissBtn)
+    dismissBtn.addEventListener("click", () => {
+      const widget = document.getElementById("jaosua-widget");
+      if (widget) widget.style.display = "none";
+    });
 }
 
 // ---------------- Initialization ----------------
@@ -221,7 +296,7 @@ function initializeWidget() {
   checkSubscriptionStatus();
 }
 
-if (document.readyState === 'loading') {
+if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeWidget);
 } else {
   initializeWidget();
