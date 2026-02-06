@@ -109,7 +109,10 @@ function showNotificationAlert(message) {
     setTimeout(() => el.remove(), 260);
   };
 
-  el.querySelector(".jaosua-notification-alert-close").addEventListener("click", close);
+  el.querySelector(".jaosua-notification-alert-close").addEventListener(
+    "click",
+    close,
+  );
   const timer = setTimeout(close, NOTIFICATION_AUTO_CLOSE_MS);
   el.addEventListener("mouseenter", () => clearTimeout(timer));
 
@@ -180,7 +183,9 @@ async function requestNotificationPermission() {
   if (typeof Notification === "undefined")
     throw new Error("Notifications not supported");
   if (Notification.permission === "denied")
-    throw new Error("Notification permission denied");
+    throw new Error(
+      "Notification permission denied. Please allow permission in your browser settings to subscribe",
+    );
   if (Notification.permission !== "granted") {
     const permission = await Notification.requestPermission();
     if (permission !== "granted")
@@ -248,8 +253,13 @@ async function toggleSubscription() {
     });
 
     if (!res.ok) {
-      const { message } = await res.json().catch(() => ({}));
-      throw new Error(message || `Request failed (${res.status})`);
+      const { statusCode, message } = await res.json().catch(() => ({}));
+      let errorMessage = message;
+      if (statusCode === 401) {
+        errorMessage = "We're unable to subscribe you to notifications at the moment. Please try again later.";
+      }
+      console.error("Subscription error:", statusCode, errorMessage);
+      throw new Error(errorMessage || `Request failed (${res.status})`);
     }
 
     updateButtonState(!isSubscribed);
